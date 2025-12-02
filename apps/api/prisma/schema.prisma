@@ -1,0 +1,254 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & BALANCE
+// ============================================
+
+model User {
+  id            String   @id @default(cuid())
+  walletAddress String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  balance      Balance?
+  bets         Bet[]
+  transactions Transaction[]
+
+  @@index([walletAddress])
+}
+
+model Balance {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  available Decimal  @default(0) @db.Decimal(18, 6)
+  locked    Decimal  @default(0) @db.Decimal(18, 6)
+  inYield   Decimal  @default(0) @db.Decimal(18, 6)
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Transaction {
+  id        String          @id @default(cuid())
+  userId    String
+  type      TransactionType
+  amount    Decimal         @db.Decimal(18, 6)
+  status    TxStatus        @default(PENDING)
+  txHash    String?
+  betId     String?
+  metadata  Json?
+  createdAt DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  bet  Bet? @relation(fields: [betId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  BET_STAKE
+  BET_WIN
+  BET_REFUND
+  YIELD_DEPOSIT
+  YIELD_WITHDRAW
+  YIELD_EARNED
+}
+
+enum TxStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+// ============================================
+// SPORTS DATA
+// ============================================
+
+model League {
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  name       String
+  country    String
+  sport      Sport    @default(SOCCER)
+  logo       String?
+  priority   Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  teams   Team[]
+  matches Match[]
+
+  @@index([sport])
+  @@index([isActive])
+}
+
+model Team {
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  name       String
+  shortName  String?
+  logo       String?
+  leagueId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  league      League  @relation(fields: [leagueId], references: [id])
+  homeMatches Match[] @relation("HomeTeam")
+  awayMatches Match[] @relation("AwayTeam")
+
+  @@index([leagueId])
+}
+
+model Match {
+  id         String      @id @default(cuid())
+  externalId String      @unique
+  leagueId   String
+  homeTeamId String
+  awayTeamId String
+  startTime  DateTime
+  status     MatchStatus @default(UPCOMING)
+  homeScore  Int?
+  awayScore  Int?
+  venue      String?
+  metadata   Json?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  league   League   @relation(fields: [leagueId], references: [id])
+  homeTeam Team     @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam Team     @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  markets  Market[]
+
+  @@index([leagueId])
+  @@index([status])
+  @@index([startTime])
+}
+
+enum Sport {
+  SOCCER
+  BASKETBALL
+  TENNIS
+  AMERICAN_FOOTBALL
+  BASEBALL
+  HOCKEY
+  MMA
+}
+
+enum MatchStatus {
+  UPCOMING
+  LIVE
+  FINISHED
+  POSTPONED
+  CANCELLED
+}
+
+// ============================================
+// MARKETS & ODDS
+// ============================================
+
+model Market {
+  id        String       @id @default(cuid())
+  matchId   String
+  type      MarketType
+  name      String
+  line      Decimal?     @db.Decimal(6, 2)
+  status    MarketStatus @default(OPEN)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  match    Match     @relation(fields: [matchId], references: [id])
+  outcomes Outcome[]
+
+  @@unique([matchId, type, line])
+  @@index([matchId])
+  @@index([status])
+}
+
+model Outcome {
+  id           String        @id @default(cuid())
+  marketId     String
+  name         String
+  odds         Decimal       @db.Decimal(8, 4)
+  previousOdds Decimal?      @db.Decimal(8, 4)
+  result       OutcomeResult @default(PENDING)
+  updatedAt    DateTime      @updatedAt
+
+  market Market @relation(fields: [marketId], references: [id])
+  bets   Bet[]
+
+  @@index([marketId])
+}
+
+enum MarketType {
+  MATCH_RESULT
+  ASIAN_HANDICAP
+  OVER_UNDER
+  BOTH_TO_SCORE
+  DOUBLE_CHANCE
+  CORRECT_SCORE
+  HALF_TIME_RESULT
+  FIRST_GOALSCORER
+}
+
+enum MarketStatus {
+  OPEN
+  SUSPENDED
+  SETTLED
+  VOID
+}
+
+enum OutcomeResult {
+  PENDING
+  WIN
+  LOSE
+  VOID
+  HALF_WIN
+  HALF_LOSE
+}
+
+// ============================================
+// BETS
+// ============================================
+
+model Bet {
+  id              String    @id @default(cuid())
+  userId          String
+  outcomeId       String
+  stake           Decimal   @db.Decimal(18, 6)
+  odds            Decimal   @db.Decimal(8, 4)
+  potentialReturn Decimal   @db.Decimal(18, 6)
+  actualReturn    Decimal?  @db.Decimal(18, 6)
+  status          BetStatus @default(PENDING)
+  settledAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  user         User          @relation(fields: [userId], references: [id])
+  outcome      Outcome       @relation(fields: [outcomeId], references: [id])
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum BetStatus {
+  PENDING
+  WON
+  LOST
+  VOID
+  HALF_WON
+  HALF_LOST
+  CASHED_OUT
+}

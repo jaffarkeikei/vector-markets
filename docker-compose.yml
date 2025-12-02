@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vector-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: vector_markets
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: vector-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Solana test validator (optional - uncomment to use)
+  # solana:
+  #   image: solanalabs/solana:v1.18.0
+  #   container_name: vector-solana
+  #   command: solana-test-validator
+  #   ports:
+  #     - '8899:8899'
+  #     - '8900:8900'
+  #   volumes:
+  #     - solana_data:/root/.config/solana
+
+volumes:
+  postgres_data:
+  redis_data:
+  # solana_data:

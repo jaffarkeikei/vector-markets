@@ -1,0 +1,19 @@
+[features]
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+vector_vault = "VecT1111111111111111111111111111111111111111"
+
+[programs.devnet]
+vector_vault = "VecT1111111111111111111111111111111111111111"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "pnpm ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
