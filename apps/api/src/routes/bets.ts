@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { Decimal } from '@prisma/client/runtime/library';
 import { prisma } from '../lib/prisma.js';
+import { Prisma, Bet, Outcome, Market, Match, Team } from '@prisma/client';
 
 const placeBetSchema = z.object({
   outcomeId: z.string(),
@@ -14,6 +14,17 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
   offset: z.coerce.number().min(0).default(0),
 });
+
+type BetWithRelations = Bet & {
+  outcome: Outcome & {
+    market: Market & {
+      match: Match & {
+        homeTeam: Team;
+        awayTeam: Team;
+      };
+    };
+  };
+};
 
 // Auth middleware helper
 async function authenticate(fastify: FastifyInstance, request: any, reply: any) {
@@ -82,7 +93,7 @@ export async function betRoutes(fastify: FastifyInstance) {
     // Create bet and update balance in transaction
     const potentialReturn = body.stake * Number(outcome.odds);
 
-    const bet = await prisma.$transaction(async (tx) => {
+    const bet = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Lock funds
       await tx.balance.update({
         where: { userId },
@@ -149,7 +160,7 @@ export async function betRoutes(fastify: FastifyInstance) {
 
     const query = listQuerySchema.parse(request.query);
 
-    const where: any = { userId };
+    const where: Prisma.BetWhereInput = { userId };
     if (query.status) {
       where.status = query.status;
     }
@@ -180,13 +191,13 @@ export async function betRoutes(fastify: FastifyInstance) {
       prisma.bet.count({ where }),
     ]);
 
-    const totalStake = bets.reduce((sum, bet) => sum + Number(bet.stake), 0);
+    const totalStake = bets.reduce((sum: number, bet: Bet) => sum + Number(bet.stake), 0);
     const potentialReturn = bets
-      .filter((bet) => bet.status === 'PENDING')
-      .reduce((sum, bet) => sum + Number(bet.potentialReturn), 0);
+      .filter((bet: Bet) => bet.status === 'PENDING')
+      .reduce((sum: number, bet: Bet) => sum + Number(bet.potentialReturn), 0);
 
     return {
-      bets: bets.map((bet) => ({
+      bets: bets.map((bet: BetWithRelations) => ({
         id: bet.id,
         status: bet.status.toLowerCase(),
         match: {
@@ -227,9 +238,9 @@ export async function betRoutes(fastify: FastifyInstance) {
 
     const query = listQuerySchema.parse(request.query);
 
-    const where = {
+    const where: Prisma.BetWhereInput = {
       userId,
-      status: { in: ['WON', 'LOST', 'VOID', 'HALF_WON', 'HALF_LOST'] as const },
+      status: { in: ['WON', 'LOST', 'VOID', 'HALF_WON', 'HALF_LOST'] },
     };
 
     const [bets, total, stats] = await Promise.all([
@@ -273,7 +284,7 @@ export async function betRoutes(fastify: FastifyInstance) {
     const roi = totalStake > 0 ? (profit / totalStake) * 100 : 0;
 
     return {
-      bets: bets.map((bet) => ({
+      bets: bets.map((bet: BetWithRelations) => ({
         id: bet.id,
         status: bet.status.toLowerCase(),
         match: {

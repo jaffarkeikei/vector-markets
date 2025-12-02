@@ -27,9 +27,9 @@ model User {
 model Balance {
   id        String   @id @default(cuid())
   userId    String   @unique
-  available Decimal  @default(0) @db.Decimal(18, 6)
-  locked    Decimal  @default(0) @db.Decimal(18, 6)
-  inYield   Decimal  @default(0) @db.Decimal(18, 6)
+  available Float    @default(0)
+  locked    Float    @default(0)
+  inYield   Float    @default(0)
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
@@ -39,7 +39,7 @@ model Transaction {
   id        String          @id @default(cuid())
   userId    String
   type      TransactionType
-  amount    Decimal         @db.Decimal(18, 6)
+  amount    Float
   status    TxStatus        @default(PENDING)
   txHash    String?
   betId     String?
@@ -163,7 +163,7 @@ model Market {
   matchId   String
   type      MarketType
   name      String
-  line      Decimal?     @db.Decimal(6, 2)
+  line      Float?
   status    MarketStatus @default(OPEN)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
@@ -180,8 +180,8 @@ model Outcome {
   id           String        @id @default(cuid())
   marketId     String
   name         String
-  odds         Decimal       @db.Decimal(8, 4)
-  previousOdds Decimal?      @db.Decimal(8, 4)
+  odds         Float
+  previousOdds Float?
   result       OutcomeResult @default(PENDING)
   updatedAt    DateTime      @updatedAt
 
@@ -226,10 +226,10 @@ model Bet {
   id              String    @id @default(cuid())
   userId          String
   outcomeId       String
-  stake           Decimal   @db.Decimal(18, 6)
-  odds            Decimal   @db.Decimal(8, 4)
-  potentialReturn Decimal   @db.Decimal(18, 6)
-  actualReturn    Decimal?  @db.Decimal(18, 6)
+  stake           Float
+  odds            Float
+  potentialReturn Float
+  actualReturn    Float?
   status          BetStatus @default(PENDING)
   settledAt       DateTime?
   createdAt       DateTime  @default(now())

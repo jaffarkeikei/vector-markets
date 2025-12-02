@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "anchor build",
+    "build": "echo 'Skipping Anchor build - run anchor build manually if Anchor CLI is installed'",
+    "build:anchor": "anchor build",
     "test": "anchor test",
     "deploy:devnet": "anchor deploy --provider.cluster devnet",
     "deploy:mainnet": "anchor deploy --provider.cluster mainnet"

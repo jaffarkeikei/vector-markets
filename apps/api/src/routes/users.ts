@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
+import { Transaction } from '@prisma/client';
 
 const transactionsQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
@@ -111,7 +112,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     ]);
 
     return {
-      transactions: transactions.map((tx) => ({
+      transactions: transactions.map((tx: Transaction) => ({
         id: tx.id,
         type: tx.type.toLowerCase(),
         amount: tx.amount,

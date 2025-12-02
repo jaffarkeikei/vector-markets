@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
+import { Prisma, Match, League, Team, Market, Outcome } from '@prisma/client';
 
 const listQuerySchema = z.object({
   sport: z.string().optional(),
@@ -10,12 +11,19 @@ const listQuerySchema = z.object({
   offset: z.coerce.number().min(0).default(0),
 });
 
+type MatchWithRelations = Match & {
+  league: League;
+  homeTeam: Team;
+  awayTeam: Team;
+  markets: (Market & { outcomes: Outcome[] })[];
+};
+
 export async function matchRoutes(fastify: FastifyInstance) {
   // List matches
   fastify.get('/', async (request) => {
     const query = listQuerySchema.parse(request.query);
 
-    const where: any = {};
+    const where: Prisma.MatchWhereInput = {};
 
     if (query.status) {
       where.status = query.status;
@@ -28,7 +36,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     }
 
     if (query.sport) {
-      where.league = { ...where.league, sport: query.sport.toUpperCase() };
+      where.league = { ...where.league as Prisma.LeagueWhereInput, sport: query.sport.toUpperCase() as any };
     }
 
     const [matches, total] = await Promise.all([
@@ -51,7 +59,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
     ]);
 
     return {
-      matches: matches.map((match) => {
+      matches: matches.map((match: MatchWithRelations) => {
         const matchResultMarket = match.markets[0];
         const outcomes = matchResultMarket?.outcomes || [];
 
@@ -76,9 +84,9 @@ export async function matchRoutes(fastify: FastifyInstance) {
           startTime: match.startTime.toISOString(),
           status: match.status.toLowerCase(),
           bestOdds: {
-            home: outcomes.find((o) => o.name === 'Home')?.odds || null,
-            draw: outcomes.find((o) => o.name === 'Draw')?.odds || null,
-            away: outcomes.find((o) => o.name === 'Away')?.odds || null,
+            home: outcomes.find((o: Outcome) => o.name === 'Home')?.odds || null,
+            draw: outcomes.find((o: Outcome) => o.name === 'Draw')?.odds || null,
+            away: outcomes.find((o: Outcome) => o.name === 'Away')?.odds || null,
           },
           marketsCount: match.markets.length,
         };
@@ -135,12 +143,12 @@ export async function matchRoutes(fastify: FastifyInstance) {
       venue: match.venue,
       homeScore: match.homeScore,
       awayScore: match.awayScore,
-      markets: match.markets.map((market) => ({
+      markets: match.markets.map((market: Market & { outcomes: Outcome[] }) => ({
         id: market.id,
         name: market.name,
         type: market.type.toLowerCase(),
         line: market.line,
-        outcomes: market.outcomes.map((outcome) => ({
+        outcomes: market.outcomes.map((outcome: Outcome) => ({
           id: outcome.id,
           name: outcome.name,
           odds: outcome.odds,
