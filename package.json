@@ -12,9 +12,11 @@
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "check-types": "turbo check-types",
+    "test": "turbo test",
     "clean": "turbo clean && rm -rf node_modules",
-    "db:generate": "turbo db:generate",
-    "db:push": "turbo db:push",
+    "db:generate": "pnpm --filter api db:generate",
+    "db:push": "pnpm --filter api db:push",
+    "db:seed": "pnpm --filter api db:seed",
     "db:studio": "pnpm --filter api db:studio"
   },
   "devDependencies": {
