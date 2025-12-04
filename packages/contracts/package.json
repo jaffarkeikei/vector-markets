@@ -5,7 +5,8 @@
   "scripts": {
     "build": "echo 'Skipping Anchor build - run anchor build manually if Anchor CLI is installed'",
     "build:anchor": "anchor build",
-    "test": "anchor test",
+    "test": "echo 'Skipping Anchor tests - run anchor test manually if Anchor CLI is installed'",
+    "test:anchor": "anchor test",
     "deploy:devnet": "anchor deploy --provider.cluster devnet",
     "deploy:mainnet": "anchor deploy --provider.cluster mainnet"
   },
