@@ -152,13 +152,13 @@ async function main() {
       },
     });
 
-    // Create 1X2 market
+    // Create 1X2 market (use line: 0 as a placeholder for MATCH_RESULT)
     const market = await prisma.market.upsert({
       where: {
         matchId_type_line: {
           matchId: match.id,
           type: MarketType.MATCH_RESULT,
-          line: null as any,
+          line: 0,
         },
       },
       update: {},
@@ -166,6 +166,7 @@ async function main() {
         matchId: match.id,
         type: MarketType.MATCH_RESULT,
         name: 'Match Result',
+        line: 0,
         status: MarketStatus.OPEN,
       },
     });
